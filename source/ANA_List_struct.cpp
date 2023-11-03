@@ -1,5 +1,13 @@
 #include "ANA_List_struct.h"
 
+const size_t BFG9000 = 9000;
+
+__attribute__ ((constructor))
+static void CleanLogFile ();
+
+__attribute__ ((format(printf, 1, 2)))
+static void PrintLogs (const char* const fmt, ...);
+
 ANA_List_error_type
 ANA_List_Ctor (ANA_List* const list)
 {
@@ -177,7 +185,6 @@ ANA_List_error_type
 ANA_List_CheckErrorOccurence (ANA_List_errors*     list_errors_field,
                               ANA_List_errors* ref_list_errors_field)
 {
-//union
     if (memcmp (list_errors_field,
             ref_list_errors_field,
             sizeof (ANA_List_errors)))
@@ -189,23 +196,73 @@ ANA_List_CheckErrorOccurence (ANA_List_errors*     list_errors_field,
 }
 
 void
-ANA_List_Dump (ANA_List* list)
+ANA_List_Dump (const ANA_List* list)
 {
+    ANA_List_DumpHeader        (list);
+
+    ANA_List_DumpElems         (list);
+
+    ANA_List_DumpArrows        (list);
+
+    ANA_List_DumpListPositions (list);
+
+    system ("dot ANA_List_logs.dot -T png -o logs.png");
+}
+
+void
+ANA_List_DumpHeader (const ANA_List* const list)
+{
+    PrintLogs ("digraph G\n{\n");
+
+    PrintLogs ("    rankdir = LR;\n");
+    PrintLogs ("    bgcolor = \"#80FFFF\"\n");
+    PrintLogs ("    node [width = 2, style = filled, color = white];\n");
+    PrintLogs ("    edge [color = \"darkgreen\", "
+                         "fontcolor = \"blue\", "
+                         "fontsize = 12];\n\n");
+
+    PrintLogs ("    subgraph cluster0\n    {\n");
+    PrintLogs ("        style = filled;\n");
+    PrintLogs ("        label = \"My list\";\n\n");
+
+    // console
     fprintf (stderr, "List [%p]\n", list);
     if (!list)
     {
         fprintf (stderr, "No other info avalable.\n");
     }
+}
 
-    fprintf (stderr, "List info:\n");
-    fprintf (stderr, "Volume %zd\nNumber of elements %zd\n",
-             list->list_volume, list->list_n_elems);
-    fprintf (stderr, "Head to %d\nTail to %d\n",
-             list->head, list->tail);
-    fprintf (stderr, "First free element %d\n",
-             list->free);
+void
+ANA_List_DumpElems (const ANA_List* const list)
+{
+    for (size_t list_index = 0;
+                list_index < list->list_volume;
+              ++list_index)
+    {
+        PrintLogs ("        %zd [shape = \"Mrecord\", "
+                                "label = \"index: %zd | "
+                                "value: %d | next: %d | prev: %d"
+                                "\"];\n",
+                                list_index, list_index,
+                                list->list_data [list_index],
+                                list->next [list_index],
+                                list->prev [list_index]);
+    }
 
-    fprintf (stderr, "List filling:\nData:\n");
+    // invisible arrows
+    PrintLogs ("        ");
+    for (size_t list_index = 0;
+                list_index < list->list_volume - 1;
+              ++list_index)
+    {
+        PrintLogs ("%zd -> ", list_index);
+    }
+    PrintLogs ("%zd ", list->list_volume - 1);
+    PrintLogs ("[weight = %zd, color = \"#80FFFF\"];\n\n", BFG9000);
+
+    // console
+    fprintf (stderr, "List data:\n");
     for (size_t list_index = 0;
                 list_index < list->list_volume;
               ++list_index)
@@ -213,6 +270,7 @@ ANA_List_Dump (ANA_List* list)
         fprintf (stderr, "%10d ", list->list_data[list_index]);
     }
     fputc ('\n', stderr);
+
     fprintf (stderr, "Next:\n");
     for (size_t list_index = 0;
                 list_index < list->list_volume;
@@ -221,6 +279,7 @@ ANA_List_Dump (ANA_List* list)
         fprintf (stderr, "%10d ", list->next[list_index]);
     }
     fputc ('\n', stderr);
+
     fprintf (stderr, "Prev:\n");
     for (size_t list_index = 0;
                 list_index < list->list_volume;
@@ -229,4 +288,91 @@ ANA_List_Dump (ANA_List* list)
         fprintf (stderr, "%10d ", list->prev[list_index]);
     }
     fputc ('\n', stderr);
+}
+
+void
+ANA_List_DumpArrows (const ANA_List* const list)
+{
+    for (size_t list_index = 0;
+                list_index < list->list_volume;
+              ++list_index)
+    {
+        if (list->prev [list_index] != -1)
+        {
+            PrintLogs ("        %zd -> %d [color = \"#FF0000\"]\n",
+                       list_index, list->next [list_index]);
+        }
+    }
+
+    for (size_t list_index = 0;
+                list_index < list->list_volume;
+              ++list_index)
+    {
+        if (list->prev [list_index] == -1)
+        {
+            PrintLogs ("        %zd -> %d [color = \"#00FF00\"]\n",
+                       list_index, list->next [list_index]);
+        }
+    }
+
+    for (size_t list_index = 0;
+                list_index < list->list_volume;
+              ++list_index)
+    {
+        if (list->prev [list_index] != -1)
+        {
+            PrintLogs ("        %zd -> %d [color = \"#0000FF\"]\n",
+                       list_index, list->prev [list_index]);
+        }
+    }
+
+    PrintLogs ("    }\n");
+}
+
+void
+ANA_List_DumpListPositions (const ANA_List* const list)
+{
+    PrintLogs ("    HEAD [width = 1, shape = \"Mrecord\"]");
+    PrintLogs ("    TAIL [width = 1, shape = \"Mrecord\"]");
+    PrintLogs ("    FREE [width = 1, shape = \"Mrecord\"]");
+
+    PrintLogs ("    HEAD -> %d", list->head);
+    PrintLogs ("    TAIL -> %d", list->tail);
+    PrintLogs ("    FREE -> %d", list->free);
+
+    PrintLogs ("}");
+
+    // console
+    fprintf (stderr, "List info:\n");
+    fprintf (stderr, "Volume %zd\nNumber of elements %zd\n",
+             list->list_volume, list->list_n_elems);
+    fprintf (stderr, "Head to %d\nTail to %d\n",
+             list->head, list->tail);
+    fprintf (stderr, "First free element %d\n",
+             list->free);
+}
+
+__attribute__ ((constructor))
+static void CleanLogFile ()
+{
+    FILE*   fp = fopen (ANA_List_log_file_name, "wb");
+    fclose (fp);
+}
+
+__attribute__ ((format(printf, 1, 2)))
+static void PrintLogs (const char* const fmt, ...)
+{
+    assert (fmt);
+
+    FILE* fp = fopen (ANA_List_log_file_name, "a");
+
+    va_list args = {};
+
+    va_start (args, fmt);
+
+    vfprintf (fp, fmt, args);
+
+    va_end   (args);
+    fclose   (fp);
+    fp = nullptr;
 }

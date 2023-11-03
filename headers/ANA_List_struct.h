@@ -5,6 +5,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <stdarg.h>
 #include "ANA_List_config.h"
 
 #define ANA_List_Assert(list)   \
@@ -91,6 +92,18 @@ ANA_List_CheckErrorOccurence (ANA_List_errors*     list_errors_field,
                               ANA_List_errors* ref_list_errors_field);
 
 void
-ANA_List_Dump (ANA_List* list);
+ANA_List_Dump              (const ANA_List* const list);
+
+void
+ANA_List_DumpHeader        (const ANA_List* const list);
+
+void
+ANA_List_DumpElems         (const ANA_List* const list);
+
+void
+ANA_List_DumpArrows        (const ANA_List* const list);
+
+void
+ANA_List_DumpListPositions (const ANA_List* const list);
 
 #endif

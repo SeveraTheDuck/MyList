@@ -15,6 +15,8 @@ ANA_List_PushBack (const ANA_List_data_type value,
     list->next [ list->tail ] = 0;
     list->list_data [ list->tail ] = value;
 
+    list->prev [0] = list->tail;
+
     ANA_List_VerifyAndDump (list);
 
     return list->tail;
@@ -40,6 +42,7 @@ ANA_List_Insert (const int                position,
         return list->tail;
     }
 
+    // insert itself
     int new_index = list->free;
     list->free    = list->next[ list->free ];
 

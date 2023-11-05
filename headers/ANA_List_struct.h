@@ -18,12 +18,18 @@
     if (ANA_List_Verify (list))         \
     {                                   \
         ANA_List_Dump (list);           \
+        ANA_List_Dtor (list);           \
+        exit (ANA_List_ERROR_OCCURED);  \
     }
 
 typedef unsigned short ANA_List_error_type;
 
 const ANA_List_error_type ANA_List_ERROR_OCCURED = 1;
 const ANA_List_error_type ANA_List_NO_ERROR      = 0;
+
+const int ANA_List_NO_PREV_ELEMENT = -1;
+
+const int ANA_List_DUMMY_ELEMENT  =  0;
 
 struct ANA_List_errors_struct
 {
@@ -56,7 +62,7 @@ struct ANA_List
     int tail;
     int free;
 
-    size_t list_volume;
+    size_t list_capacity;
     size_t list_n_elems;
 
     ANA_List_errors     list_errors_field;
@@ -95,15 +101,22 @@ void
 ANA_List_Dump              (const ANA_List* const list);
 
 void
-ANA_List_DumpHeader        (const ANA_List* const list);
+ANA_List_DumpHeader        (const ANA_List* const list,
+                                  FILE*     const log_img,
+                                  FILE*     const log_txt);
 
 void
-ANA_List_DumpElems         (const ANA_List* const list);
+ANA_List_DumpElems         (const ANA_List* const list,
+                                  FILE*     const log_img,
+                                  FILE*     const log_txt);
 
 void
-ANA_List_DumpArrows        (const ANA_List* const list);
+ANA_List_DumpArrows        (const ANA_List* const list,
+                                  FILE*     const log_img);
 
 void
-ANA_List_DumpListPositions (const ANA_List* const list);
+ANA_List_DumpListPositions (const ANA_List* const list,
+                                  FILE*     const log_img,
+                                  FILE*     const log_txt);
 
 #endif

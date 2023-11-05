@@ -73,50 +73,12 @@ ANA_List_error_type
 ANA_List_Ctor           (ANA_List* const list);
 
 ANA_List_error_type
-ANA_List_CtorAllocate   (ANA_List* const list);
-
-ANA_List_error_type
-ANA_List_CtorFill       (ANA_List* const list);
-
-ANA_List_error_type
 ANA_List_Dtor           (ANA_List* const list);
-
-ANA_List_error_type
-ANA_List_DtorPoison     (ANA_List* const list);
-
-ANA_List_error_type
-ANA_List_DtorFree       (ANA_List* const list);
-
-ANA_List_error_type
-ANA_List_DtorFree       (ANA_List* const list);
 
 ANA_List_error_type
 ANA_List_Verify         (ANA_List* const list);
 
-ANA_List_error_type
-ANA_List_CheckErrorOccurence (ANA_List_errors*     list_errors_field,
-                              ANA_List_errors* ref_list_errors_field);
-
 void
 ANA_List_Dump              (const ANA_List* const list);
-
-void
-ANA_List_DumpHeader        (const ANA_List* const list,
-                                  FILE*     const log_img,
-                                  FILE*     const log_txt);
-
-void
-ANA_List_DumpElems         (const ANA_List* const list,
-                                  FILE*     const log_img,
-                                  FILE*     const log_txt);
-
-void
-ANA_List_DumpArrows        (const ANA_List* const list,
-                                  FILE*     const log_img);
-
-void
-ANA_List_DumpListPositions (const ANA_List* const list,
-                                  FILE*     const log_img,
-                                  FILE*     const log_txt);
 
 #endif

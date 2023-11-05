@@ -7,6 +7,8 @@ int main ()
 
     ANA_List_Ctor (&list);
 
+    ANA_List_Dump  (&list);
+
     ANA_List_Insert (1, 10, &list);
     ANA_List_Insert (2, 20, &list);
     ANA_List_Insert (2, 15, &list);

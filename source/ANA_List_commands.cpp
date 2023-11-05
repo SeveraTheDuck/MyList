@@ -1,11 +1,14 @@
 #include "../headers/ANA_List_commands.h"
 
-// some magic in this commands. No way to make more understandable?
 int
 ANA_List_PushBack (const ANA_List_data_type value,
                          ANA_List*    const list)
 {
     ANA_List_VerifyAndDump (list);
+
+    // Node* next = ...
+    // Node* cur = ..
+    // next->next = cur->free
 
     list->next [ list->tail ] = list->free;
     list->prev [ list->free ] = list->tail;
@@ -29,11 +32,12 @@ ANA_List_PushFront (const ANA_List_data_type value,
 {
     ANA_List_VerifyAndDump (list);
 
-    list->prev [ list->head ] = list->free;
-    list->next [ list->free ] = list->head;
-    list->head = list->free;
-
+    int new_index = list->free;
     list->free = list->next [ list->free ];
+
+    list->prev [ list->head ] = new_index;
+    list->next [ new_index  ] = list->head;
+    list->head = new_index;
 
     list->prev [ list->head ] = 0;
     list->list_data [ list->head ] = value;
@@ -42,7 +46,7 @@ ANA_List_PushFront (const ANA_List_data_type value,
 
     ANA_List_VerifyAndDump (list);
 
-    return list->tail;
+    return list->head;
 }
 
 int
@@ -52,14 +56,15 @@ ANA_List_Insert (const int                position,
 {
     ANA_List_VerifyAndDump (list);
 
-    if ((unsigned int) position > list->list_n_elems ||
-                       position < 1)
+    if (position <= 0)
     {
-        fprintf (stderr, "Position element out of range\n");
+        fprintf (stderr, "In function ANA_List_Insert "
+                         "position of element out of range.\n");
         return ANA_List_DUMMY_ELEMENT;
     }
     list->list_n_elems++;
 
+    // therefore, the list members are located close to each other
     if (list->prev [position] == ANA_List_NO_PREV_ELEMENT)
     {
         ANA_List_PushBack (value, list);
@@ -93,17 +98,23 @@ int
 ANA_List_Erase (const unsigned int       position,
                       ANA_List*    const list)
 {
-    if (position > list->list_n_elems)
+    if (list->prev [position] == ANA_List_NO_PREV_ELEMENT)
     {
-        fprintf (stderr, "Position element out of range\n");
+        fprintf (stderr, "In function ANA_List_Erase "
+                         "position of element out of range.\n");
         return ANA_List_DUMMY_ELEMENT;
     }
+    else if (position == ANA_List_DUMMY_ELEMENT)
+    {
+        fprintf (stderr, "In function ANA_List_Erase "
+                         "calling for dummy element, return.\n");
+        return ANA_List_DUMMY_ELEMENT;
+    }
+
     list->list_n_elems--;
 
-    list->next [ list->prev [position] ] =
-                 list->next [position];
-    list->prev [ list->next [position] ] =
-                 list->prev [position];
+    list->next [ list->prev [position] ] = list->next [position];
+    list->prev [ list->next [position] ] = list->prev [position];
 
     int prev_index = list->prev [position];
 
@@ -111,7 +122,7 @@ ANA_List_Erase (const unsigned int       position,
     list->prev      [position] = ANA_List_NO_PREV_ELEMENT;
     list->list_data [position] = ANA_List_POISON;
 
-    list->free = (int) position;
+    list->free = (int) position; // size_t ptrdiff_t
 
     return prev_index;
 }

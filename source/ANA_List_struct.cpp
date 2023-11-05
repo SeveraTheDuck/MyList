@@ -2,8 +2,55 @@
 
 const size_t BFG9000 = 9000;
 
+// FILE* stdout
+// stdin
+// fprintf( FILE*
+
 __attribute__ ((constructor))
-static void CleanLogFile ();
+static FILE* OpenLogFile ();
+
+static ANA_List_error_type
+ANA_List_CtorAllocate   (ANA_List* const list);
+
+static ANA_List_error_type
+ANA_List_CtorFill       (ANA_List* const list);
+
+static ANA_List_error_type
+ANA_List_DtorPoison     (ANA_List* const list);
+
+static ANA_List_error_type
+ANA_List_DtorFree       (ANA_List* const list);
+
+static ANA_List_error_type
+ANA_List_CheckErrorOccurence (const ANA_List_errors* const     list_errors_field,
+                              const ANA_List_errors* const ref_list_errors_field);
+
+static char*
+ANA_List_DumpImage (const ANA_List* const list,
+                          FILE*     const log_img,
+                          FILE*     const log_txt);
+
+static void
+ANA_List_DumpImageHeader (FILE* const log_img);
+
+static void
+ANA_List_DumpImageElems (const ANA_List* const list,
+                               FILE*     const log_img);
+
+static void
+ANA_List_DumpImageArrows (const ANA_List* const list,
+                                FILE*     const log_img);
+
+static void
+ANA_List_DumpImagePositions (const ANA_List* const list,
+                                   FILE*     const log_img);
+
+static void
+ANA_List_DumpText (const ANA_List* const list,
+                         FILE*     const log_txt);
+
+// logs() logs
+// fprintf( logs, "hello");
 
 ANA_List_error_type
 ANA_List_Ctor (ANA_List* const list)
@@ -28,7 +75,7 @@ ANA_List_Ctor (ANA_List* const list)
     return ANA_List_NO_ERROR;
 }
 
-ANA_List_error_type
+static ANA_List_error_type
 ANA_List_CtorAllocate (ANA_List* const list)
 {
     list->list_capacity  = ANA_List_INIT_VOLUME;
@@ -73,8 +120,7 @@ ANA_List_CtorAllocate (ANA_List* const list)
     return ANA_List_NO_ERROR;
 }
 
-// can it be anything wrong?
-ANA_List_error_type
+static ANA_List_error_type
 ANA_List_CtorFill (ANA_List* const list)
 {
     ANA_List_Assert (list);
@@ -105,6 +151,9 @@ ANA_List_CtorFill (ANA_List* const list)
 ANA_List_error_type
 ANA_List_Dtor (ANA_List* const list)
 {
+    /*
+     * ...
+     */
     assert (list);
 
     ANA_List_DtorPoison (list);
@@ -113,7 +162,7 @@ ANA_List_Dtor (ANA_List* const list)
     return ANA_List_NO_ERROR;
 }
 
-ANA_List_error_type
+static ANA_List_error_type
 ANA_List_DtorPoison (ANA_List* const list)
 {
     ANA_List_Assert (list);
@@ -136,7 +185,7 @@ ANA_List_DtorPoison (ANA_List* const list)
     return ANA_List_NO_ERROR;
 }
 
-ANA_List_error_type
+static ANA_List_error_type
 ANA_List_DtorFree (ANA_List* const list)
 {
     assert (list);
@@ -210,9 +259,9 @@ ANA_List_Verify (ANA_List* const list)
                                          &list->ref_list_errors_field);
 }
 
-ANA_List_error_type
-ANA_List_CheckErrorOccurence (ANA_List_errors*     list_errors_field,
-                              ANA_List_errors* ref_list_errors_field)
+static ANA_List_error_type
+ANA_List_CheckErrorOccurence (const ANA_List_errors* const     list_errors_field,
+                              const ANA_List_errors* const ref_list_errors_field)
 {
     if (memcmp (list_errors_field,
             ref_list_errors_field,
@@ -227,68 +276,89 @@ ANA_List_CheckErrorOccurence (ANA_List_errors*     list_errors_field,
 void
 ANA_List_Dump (const ANA_List* list)
 {
-    FILE*   log_img = fopen (ANA_List_log_img_file_name, "a");
+    FILE* const log_img = fopen (ANA_List_log_img_file_name, "wb");
     assert (log_img);
 
-    FILE*   log_txt = fopen (ANA_List_log_txt_file_name, "a");
-    assert (log_txt);
+    FILE* const log_txt = OpenLogFile ();
 
-    ANA_List_DumpHeader        (list, log_img, log_txt);
+    char* const system_call_str = ANA_List_DumpImage (list, log_img, log_txt);
 
-    ANA_List_DumpElems         (list, log_img, log_txt);
+    system (system_call_str);
+    fprintf (stderr, "%s\n", system_call_str); // bug in .dot?
+    free (system_call_str);
 
-    ANA_List_DumpArrows        (list, log_img);
-
-    ANA_List_DumpListPositions (list, log_img, log_txt);
+    ANA_List_DumpText  (list, log_txt);
 
     fclose (log_img);
     fclose (log_txt);
-
-    if (list)
-    {
-        system ("dot -Tpng ANA_List_logs.dot -o logs/logs_image.png");
-    }
 }
 
-void
-ANA_List_DumpHeader (const ANA_List* const list,
-                           FILE* const log_img,
-                           FILE* const log_txt)
+static char*
+ANA_List_DumpImage (const ANA_List* const list,
+                          FILE*     const log_img,
+                          FILE*     const log_txt)
 {
-    fprintf (log_img, "digraph G\n{\n");
+    static short int number_of_images = 0;
 
-    fprintf (log_img, "    rankdir = LR;\n");
-    fprintf (log_img, "    bgcolor = \"#808080\";\n");
-    fprintf (log_img, "    graph [splines = ortho];\n");
-    fprintf (log_img, "    node  [width = 2, style = filled, color = white];\n");
-    fprintf (log_img, "    edge  [color = \"darkgreen\", "
-                                 "fontcolor = \"blue\", "
-                                 "fontsize = 15];\n\n");
+    if (!list) return nullptr;
 
-    fprintf (log_img, "    subgraph cluster0\n    {\n");
-    fprintf (log_img, "        bgcolor = \"#606060\";");
-    fprintf (log_img, "        height  = 20");
-    fprintf (log_img, "        style   = filled;\n");
-    fprintf (log_img, "        label   = \"My list\";\n\n");
+    ++number_of_images;
 
-    // console
-    fprintf (log_txt, "<pre>\nList [%p]\n", list);
-    if (!list)
-    {
-        fprintf (log_txt, "No other info avalable.\n");
-    }
+    ANA_List_DumpImageHeader    (log_img);
+
+    ANA_List_DumpImageElems     (list, log_img);
+
+    ANA_List_DumpImageArrows    (list, log_img);
+
+    ANA_List_DumpImagePositions (list, log_img);
+
+    char* system_call_str = (char*) calloc (sizeof (char),
+        sizeof ("dot -Tpng logs/ANA_List_img_logs.dot -o logs/logs_image       "));
+
+    const size_t str_shift =
+        sizeof ("dot -Tpng logs/ANA_List_img_logs.dot -o logs/logs_image") - 1;
+
+    strncpy (system_call_str,
+        "dot -Tpng logs/ANA_List_img_logs.dot -o logs/logs_image",
+        str_shift);
+
+    snprintf (system_call_str + str_shift, 100, "%d", number_of_images);
+    strncat  (system_call_str, ".png", sizeof (".png"));
+
+    fprintf (log_txt, "<img src = \"logs_image%d.png\" "
+                       "width = 80%%>\n", number_of_images);
+
+    return system_call_str;
 }
 
-void
-ANA_List_DumpElems (const ANA_List* const list,
-                           FILE* const log_img,
-                           FILE* const log_txt)
+static void
+ANA_List_DumpImageHeader (FILE* const log_img)
+{
+    fprintf (log_img, "digraph G\n{\n"
+                      "    rankdir = LR;\n"
+                      "    bgcolor = \"#808080\";\n"
+                      "    graph [splines = ortho];\n"
+                      "    node  [width = 2, style = filled, color = white];\n"
+                      "    edge  [color = \"darkgreen\", "
+                                 "fontcolor = \"blue\", "
+                                 "fontsize = 15];\n\n"
+
+                      "    subgraph cluster0\n    {\n"
+                      "        bgcolor = \"#606060\";"
+                      "        height  = 20"
+                      "        style   = filled;\n"
+                      "        label   = \"My list\";\n\n");
+}
+
+static void
+ANA_List_DumpImageElems (const ANA_List* const list,
+                               FILE*     const log_img)
 {
     for (size_t list_index = 0;
                 list_index < list->list_capacity;
               ++list_index)
     {
-        if (list->prev [list_index] == ANA_List_NO_PREV_ELEMENT)
+        if (list->list_data [list_index] == ANA_List_POISON)
         {
             fprintf (log_img, "        %zd [shape = \"Mrecord\", "
                                            "label = \"index: %zd | "
@@ -309,7 +379,12 @@ ANA_List_DumpElems (const ANA_List* const list,
                                       list->next [list_index],
                                       list->prev [list_index]);
     }
+}
 
+static void
+ANA_List_DumpImageArrows (const ANA_List* const list,
+                                FILE*     const log_img)
+{
     // invisible arrows
     fprintf (log_img, "        ");
     for (size_t list_index = 0;
@@ -321,39 +396,6 @@ ANA_List_DumpElems (const ANA_List* const list,
     fprintf (log_img, "%zd ", list->list_capacity - 1);
     fprintf (log_img, "[weight = %zd, color = \"#606060\"];\n\n", BFG9000);
 
-    // console
-    fprintf (log_txt, "List data:\n    ");
-    for (size_t list_index = 0;
-                list_index < list->list_capacity;
-              ++list_index)
-    {
-        fprintf (log_txt, "%10d ", list->list_data[list_index]);
-    }
-    fputc ('\n', log_txt);
-
-    fprintf (log_txt, "Next:\n    ");
-    for (size_t list_index = 0;
-                list_index < list->list_capacity;
-              ++list_index)
-    {
-        fprintf (log_txt, "%10d ", list->next[list_index]);
-    }
-    fputc ('\n', log_txt);
-
-    fprintf (log_txt, "Prev:\n    ");
-    for (size_t list_index = 0;
-                list_index < list->list_capacity;
-              ++list_index)
-    {
-        fprintf (log_txt, "%10d ", list->prev[list_index]);
-    }
-    fputc ('\n', log_txt);
-}
-
-void
-ANA_List_DumpArrows (const ANA_List* const list,
-                           FILE* const log_img)
-{
     for (size_t list_index = 0;
                 list_index < list->list_capacity;
               ++list_index)
@@ -392,10 +434,9 @@ ANA_List_DumpArrows (const ANA_List* const list,
     fprintf (log_img, "    }\n");
 }
 
-void
-ANA_List_DumpListPositions (const ANA_List* const list,
-                           FILE* const log_img,
-                           FILE* const log_txt)
+static void
+ANA_List_DumpImagePositions (const ANA_List* const list,
+                                   FILE*     const log_img)
 {
     fprintf (log_img, "    TAIL [width = 1, shape = \"circle\"];\n");
     fprintf (log_img, "    HEAD [width = 1, shape = \"circle\"];\n");
@@ -406,23 +447,81 @@ ANA_List_DumpListPositions (const ANA_List* const list,
     fprintf (log_img, "    FREE -> %d;\n", list->free);
 
     fprintf (log_img, "}");
+}
 
-    // console
+static void
+ANA_List_DumpText (const ANA_List* const list,
+                         FILE*     const log_txt)
+{
+    fprintf (log_txt, "<pre>\nList [%p]\n", list);
+    if (!list)
+    {
+        fprintf (log_txt, "List is nullptr. No other info avalable.\n");
+    }
+
+    fprintf (log_txt, "List data:\n    ");
+    for (size_t list_index = 0;
+                list_index < list->list_capacity;
+              ++list_index)
+    {
+        fprintf (log_txt, "%10d ", list->list_data[list_index]);
+    }
+    fputc ('\n', log_txt);
+
+    fprintf (log_txt, "Next:\n    ");
+    for (size_t list_index = 0;
+                list_index < list->list_capacity;
+              ++list_index)
+    {
+        fprintf (log_txt, "%10d ", list->next[list_index]);
+    }
+    fputc ('\n', log_txt);
+
+    fprintf (log_txt, "Prev:\n    ");
+    for (size_t list_index = 0;
+                list_index < list->list_capacity;
+              ++list_index)
+    {
+        fprintf (log_txt, "%10d ", list->prev[list_index]);
+    }
+    fputc ('\n', log_txt);
+
     fprintf (log_txt, "\nList info:\n");
     fprintf (log_txt, "    Volume %zd\n    Number of elements %zd\n",
              list->list_capacity, list->list_n_elems);
     fprintf (log_txt, "    Head to %d\n    Tail to %d\n",
              list->head, list->tail);
-    fprintf (log_txt, "    First free element %d\n\n</pre>",
+    fprintf (log_txt, "    First free element %d\n\n</pre>\n",
              list->free);
 }
 
-__attribute__ ((constructor))
-static void CleanLogFile ()
+static FILE* OpenLogFile ()
 {
-    FILE*   fp_img = fopen (ANA_List_log_img_file_name, "wb");
-    fclose (fp_img);
+    static bool is_opened = 0;
+    FILE* fp_txt = nullptr;
 
-    FILE*   fp_txt = fopen (ANA_List_log_txt_file_name, "wb");
-    fclose (fp_txt);
+    if (!is_opened)
+    {
+        fp_txt = fopen (ANA_List_log_txt_file_name, "wb");
+        fprintf (fp_txt,
+                 "<!DOCTYPE html>\n"
+                 "<html lang=\"en\">\n"
+                 "<head>\n"
+                 "<meta charset=\"UTF-8\">\n");
+        fprintf (fp_txt,
+                 "<meta name=\"viewport\" "
+                 "content=\"width=device-width, initial-scale=1.0\">\n"
+                 "<title>Logs for my list</title>\n"
+                 "</head>\n"
+                 "<body>\n"
+                 "<pre>\n");
+
+        is_opened = 1;
+
+        fclose (fp_txt);
+    }
+
+    fp_txt = fopen (ANA_List_log_txt_file_name, "a");
+
+    return fp_txt;
 }

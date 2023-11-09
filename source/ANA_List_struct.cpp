@@ -134,12 +134,10 @@ ANA_List_CtorFill (ANA_List* const list)
         list->prev     [list_index] = ANA_List_NO_PREV_ELEMENT;
     }
 
-    list->next [ ANA_List_DUMMY_ELEMENT ]   = 0;
     list->next [ ANA_List_INIT_VOLUME - 1 ] = 0;
-    list->prev [ ANA_List_DUMMY_ELEMENT ]   = 0;
+    list->next [ANA_List_DUMMY_ELEMENT] = 0;
+    list->prev [ANA_List_DUMMY_ELEMENT] = 0;
 
-    list->head = 1;
-    list->tail = 0;
     list->free = 1;
 
     memset (&list->list_errors_field,     0, sizeof(ANA_List_errors));
@@ -176,8 +174,8 @@ ANA_List_DtorPoison (ANA_List* const list)
         list->prev     [list_index] = ANA_List_NO_PREV_ELEMENT;
     }
 
-    list->head = 0;
-    list->tail = 0;
+    list->next [ANA_List_DUMMY_ELEMENT] = 0;
+    list->prev [ANA_List_DUMMY_ELEMENT] = 0;
     list->free = 0;
 
     memset (&list->list_errors_field, 0, sizeof(ANA_List_errors));
@@ -227,15 +225,15 @@ ANA_List_Verify (ANA_List* const list)
             .ANA_List_ERROR_LIST_PREV_NULLPTR = 1;
     }
 
-    if (list->head < 0 ||
-        list->head >= (long long) list->list_capacity)
+    if (list->next [ANA_List_DUMMY_ELEMENT] < 0 ||
+        list->next [ANA_List_DUMMY_ELEMENT] >= (long long) list->list_capacity)
     {
         list->list_errors_field.errors_struct
             .ANA_List_ERROR_HEAD_OUT_OF_RANGE = 1;
     }
 
-    if (list->tail < 0 ||
-        list->tail >= (long long) list->list_capacity)
+    if (list->prev [ANA_List_DUMMY_ELEMENT] < 0 ||
+        list->prev [ANA_List_DUMMY_ELEMENT] >= (long long) list->list_capacity)
     {
         list->list_errors_field.errors_struct
             .ANA_List_ERROR_HEAD_OUT_OF_RANGE = 1;
@@ -283,7 +281,7 @@ ANA_List_Dump (const ANA_List* list)
 
     char* const system_call_str = ANA_List_DumpImage (list, log_img, log_txt);
 
-    system (system_call_str);
+    printf("sys %d\n", system (system_call_str));
     fprintf (stderr, "%s\n", system_call_str); // bug in .dot?
     free (system_call_str);
 
@@ -442,8 +440,10 @@ ANA_List_DumpImagePositions (const ANA_List* const list,
     fprintf (log_img, "    HEAD [width = 1, shape = \"circle\"];\n");
     fprintf (log_img, "    FREE [width = 1, shape = \"circle\"];\n");
 
-    fprintf (log_img, "    HEAD -> %d;\n", list->head);
-    fprintf (log_img, "    TAIL -> %d;\n", list->tail);
+    fprintf (log_img, "    HEAD -> %d;\n",
+             list->next [ANA_List_DUMMY_ELEMENT]);
+    fprintf (log_img, "    TAIL -> %d;\n",
+             list->prev [ANA_List_DUMMY_ELEMENT]);
     fprintf (log_img, "    FREE -> %d;\n", list->free);
 
     fprintf (log_img, "}");
@@ -490,7 +490,8 @@ ANA_List_DumpText (const ANA_List* const list,
     fprintf (log_txt, "    Volume %zd\n    Number of elements %zd\n",
              list->list_capacity, list->list_n_elems);
     fprintf (log_txt, "    Head to %d\n    Tail to %d\n",
-             list->head, list->tail);
+             list->next [ANA_List_DUMMY_ELEMENT],
+             list->prev [ANA_List_DUMMY_ELEMENT]);
     fprintf (log_txt, "    First free element %d\n\n</pre>\n",
              list->free);
 }

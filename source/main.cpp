@@ -9,12 +9,12 @@ int main ()
 
     ANA_List_Dump  (&list);
 
-    ANA_List_Insert (1, 10, &list);
-    ANA_List_Insert (2, 20, &list);
-    ANA_List_Insert (2, 15, &list);
-    ANA_List_Insert (1,  5, &list);
+    ANA_List_PushBack  (10, &list);
+    ANA_List_PushBack  (20, &list);
+    ANA_List_Insert    (1, 15, &list);
+    ANA_List_PushFront (5, &list);
 
-    ANA_List_Erase (3, &list);
+    ANA_List_Erase (2, &list);
 
     ANA_List_Dump  (&list);
 

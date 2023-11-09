@@ -4,7 +4,9 @@
 typedef int ANA_List_data_type;
 #define ANA_List_OUTPUT_F "%d"
 
-const size_t ANA_List_INIT_VOLUME = 10;
+const size_t ANA_List_INIT_VOLUME = 4;
+
+const size_t ANA_List_EXPAND_MULTIPLIER = 2;
 
 const ANA_List_data_type ANA_List_POISON = -31415926;
 

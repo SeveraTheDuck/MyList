@@ -58,8 +58,6 @@ struct ANA_List
     int* next;
     int* prev;
 
-    int head;
-    int tail;
     int free;
 
     size_t list_capacity;

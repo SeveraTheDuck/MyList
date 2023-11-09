@@ -25,6 +25,9 @@ int
 ANA_List_Erase (const unsigned int       position,
                       ANA_List*    const list);
 
+ANA_List_error_type
+ANA_List_ReallocUp (ANA_List* const list);
+
 struct quadratic_equation
 {
     double a_coef;

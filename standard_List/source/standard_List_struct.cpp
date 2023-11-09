@@ -92,6 +92,8 @@ standard_List_Insert (standard_List_node* const prev_node,
 void
 standard_List_Erase (standard_List_node* const cur_node)
 {
+    // update head and tail!!!!
+
     cur_node->next_node->prev_node = cur_node->prev_node;
     cur_node->prev_node->next_node = cur_node->next_node;
     cur_node->node_data = 0;

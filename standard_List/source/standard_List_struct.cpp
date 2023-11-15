@@ -14,6 +14,11 @@ standard_List_Ctor (standard_List* const list,
     }
 
     standard_List_AllocateNode (&list->first_node);
+    if (!list->first_node)
+    {
+        perror ("First node allocation error");
+        return;
+    }
 
     list->head    = list->first_node;
     list->tail    = list->first_node;
@@ -90,12 +95,25 @@ standard_List_Insert (standard_List_node* const prev_node,
 }
 
 void
-standard_List_Erase (standard_List_node* const cur_node)
+standard_List_Erase (standard_List_node* const cur_node,
+                     standard_List*      const list)
 {
-    // update head and tail!!!!
+    if (cur_node == list->head)
+    {
+        list->head = cur_node->next_node;
+        list->head->prev_node = nullptr;
+    }
+    else if (cur_node == list->tail)
+    {
+        list->tail = cur_node->prev_node;
+        list->tail->next_node = nullptr;
+    }
+    else
+    {
+        cur_node->next_node->prev_node = cur_node->prev_node;
+        cur_node->prev_node->next_node = cur_node->next_node;
+    }
 
-    cur_node->next_node->prev_node = cur_node->prev_node;
-    cur_node->prev_node->next_node = cur_node->next_node;
     cur_node->node_data = 0;
 
     free (cur_node);

@@ -1,10 +1,7 @@
 #include "ANA_List_struct.h"
 
-const size_t BFG9000 = 9000;
-
-// FILE* stdout
-// stdin
-// fprintf( FILE*
+static const size_t BFG9000 = 9000;
+static const size_t ANA_List_IMAGE_MAX_NUMBER_LENGTH = 2;
 
 __attribute__ ((constructor))
 static FILE* OpenLogFile ();
@@ -49,9 +46,6 @@ static void
 ANA_List_DumpText (const ANA_List* const list,
                          FILE*     const log_txt);
 
-// logs() logs
-// fprintf( logs, "hello");
-
 ANA_List_error_type
 ANA_List_Ctor (ANA_List* const list)
 {
@@ -78,39 +72,36 @@ ANA_List_Ctor (ANA_List* const list)
 static ANA_List_error_type
 ANA_List_CtorAllocate (ANA_List* const list)
 {
-    list->list_capacity  = ANA_List_INIT_VOLUME;
-    list->list_n_elems = 1;
+    list->list_capacity = ANA_List_INIT_VOLUME;
+    list->list_n_elems  = 1;
 
     list->list_data = (ANA_List_data_type*) calloc (ANA_List_INIT_VOLUME,
                                             sizeof (ANA_List_data_type));
     if (!list->list_data)
     {
-        fprintf (stderr, "list_data allocation error, "
-                         "out of memory.\n");
+        perror ("list->list_data allocation error");
         list->list_errors_field.errors_struct
             .ANA_List_ERROR_LIST_DATA_NULLPTR = 1;
 
         return ANA_List_ERROR_OCCURED;
     }
 
-    list->next = (int*) calloc (ANA_List_INIT_VOLUME,
-                                sizeof (int));
+    list->next = (uint32_t*) calloc (ANA_List_INIT_VOLUME,
+                                     sizeof (uint32_t));
     if (!list->next)
     {
-        fprintf (stderr, "next allocation error, "
-                         "out of memory.\n");
+        perror ("list->next allocation error");
         list->list_errors_field.errors_struct
             .ANA_List_ERROR_LIST_NEXT_NULLPTR = 1;
 
         return ANA_List_ERROR_OCCURED;
     }
 
-    list->prev = (int*) calloc (ANA_List_INIT_VOLUME,
-                                sizeof (int));
+    list->prev = (int32_t*) calloc (ANA_List_INIT_VOLUME,
+                                    sizeof (int32_t));
     if (!list->prev)
     {
-        fprintf (stderr, "prev allocation error, "
-                         "out of memory.\n");
+        perror ("list->prev allocation error");
         list->list_errors_field.errors_struct
             .ANA_List_ERROR_LIST_PREV_NULLPTR = 1;
 
@@ -130,7 +121,7 @@ ANA_List_CtorFill (ANA_List* const list)
               ++list_index)
     {
         list->list_data[list_index] = ANA_List_POISON;
-        list->next     [list_index] = (int) list_index + 1;
+        list->next     [list_index] = (uint32_t) list_index + 1;
         list->prev     [list_index] = ANA_List_NO_PREV_ELEMENT;
     }
 
@@ -149,9 +140,6 @@ ANA_List_CtorFill (ANA_List* const list)
 ANA_List_error_type
 ANA_List_Dtor (ANA_List* const list)
 {
-    /*
-     * ...
-     */
     assert (list);
 
     ANA_List_DtorPoison (list);
@@ -274,20 +262,20 @@ ANA_List_CheckErrorOccurence (const ANA_List_errors* const     list_errors_field
 void
 ANA_List_Dump (const ANA_List* list)
 {
-    FILE* const log_img = fopen (ANA_List_log_img_file_name, "wb");
+    FILE* const log_img = fopen (ANA_List_IMAGE_CONSTRUCT_FILE_NAME, "wb");
     assert (log_img);
 
     FILE* const log_txt = OpenLogFile ();
 
     char* const system_call_str = ANA_List_DumpImage (list, log_img, log_txt);
 
-    printf("sys %d\n", system (system_call_str));
-    fprintf (stderr, "%s\n", system_call_str); // bug in .dot?
-    free (system_call_str);
+    fclose (log_img);
+
+    system (system_call_str);
+    free   (system_call_str);
 
     ANA_List_DumpText  (list, log_txt);
 
-    fclose (log_img);
     fclose (log_txt);
 }
 
@@ -296,7 +284,7 @@ ANA_List_DumpImage (const ANA_List* const list,
                           FILE*     const log_img,
                           FILE*     const log_txt)
 {
-    static short int number_of_images = 0;
+    static uint8_t number_of_images = 0;
 
     if (!list) return nullptr;
 
@@ -310,23 +298,27 @@ ANA_List_DumpImage (const ANA_List* const list,
 
     ANA_List_DumpImagePositions (list, log_img);
 
-    char* system_call_str = (char*) calloc (sizeof (char),
-        sizeof ("dot -Tpng logs/ANA_List_img_logs.dot -o logs/logs_image       "));
+    size_t system_call_length =
+        strlen ("dot ") +
+        strlen (ANA_List_IMAGE_CONSTRUCT_FILE_NAME) +
+        strlen (" -Tpng -o ") +
+        strlen (ANA_List_IMAGE_FILE_NAME) +
+        ANA_List_IMAGE_MAX_NUMBER_LENGTH +
+        strlen (".png");
 
-    const size_t str_shift =
-        sizeof ("dot -Tpng logs/ANA_List_img_logs.dot -o logs/logs_image") - 1;
+    char* system_call = (char*)
+        calloc (sizeof (char), system_call_length);
 
-    strncpy (system_call_str,
-        "dot -Tpng logs/ANA_List_img_logs.dot -o logs/logs_image",
-        str_shift);
+    snprintf (system_call, system_call_length,
+             "dot %s -Tpng -o %s%d.png",
+              ANA_List_IMAGE_CONSTRUCT_FILE_NAME,
+              ANA_List_IMAGE_FILE_NAME,
+              number_of_images);
 
-    snprintf (system_call_str + str_shift, 100, "%d", number_of_images);
-    strncat  (system_call_str, ".png", sizeof (".png"));
+    fprintf (log_txt, "<img src = \"../%s%d.png\" width = 80%%>",
+             ANA_List_IMAGE_FILE_NAME, number_of_images);
 
-    fprintf (log_txt, "<img src = \"logs_image%d.png\" "
-                       "width = 80%%>\n", number_of_images);
-
-    return system_call_str;
+    return system_call;
 }
 
 static void
@@ -503,7 +495,7 @@ static FILE* OpenLogFile ()
 
     if (!is_opened)
     {
-        fp_txt = fopen (ANA_List_log_txt_file_name, "wb");
+        fp_txt = fopen (ANA_List_HTML_LOGS_FILE_NAME, "wb");
         fprintf (fp_txt,
                  "<!DOCTYPE html>\n"
                  "<html lang=\"en\">\n"
@@ -522,7 +514,7 @@ static FILE* OpenLogFile ()
         fclose (fp_txt);
     }
 
-    fp_txt = fopen (ANA_List_log_txt_file_name, "a");
+    fp_txt = fopen (ANA_List_HTML_LOGS_FILE_NAME, "a");
 
     return fp_txt;
 }

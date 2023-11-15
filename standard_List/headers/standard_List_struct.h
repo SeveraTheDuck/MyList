@@ -5,7 +5,7 @@
 #include <stdlib.h>
 #include <assert.h>
 
-typedef int standard_List_data_type;
+typedef int32_t standard_List_data_type;
 
 struct standard_List_node
 {
@@ -38,7 +38,8 @@ standard_List_Insert (standard_List_node* const prev_node,
                       const standard_List_data_type value);
 
 void
-standard_List_Erase (standard_List_node* const cur_node);
+standard_List_Erase (standard_List_node* const cur_node,
+                     standard_List*      const list);
 
 void
 standard_List_Dump (const standard_List* const list);

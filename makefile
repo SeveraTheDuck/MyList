@@ -10,6 +10,7 @@ DEP:=$(patsubst %.o,%.o.d,$(OBJECT))
 EXECUTABLE=run
 
 $(EXECUTABLE): $(OBJECT) $(BIN_DIR)
+	make makedirs
 	$(CC) $(FLAGS) $(OBJECT) -o $@
 
 -include $(DEP)
@@ -22,6 +23,7 @@ $(BIN_DIR)%.o: $(SOURCE_DIR)%.cpp
 
 makedirs:
 	mkdir -p $(BIN_DIR)
+	mkdir -p logs/
 
 clean:
 	rm -rf $(OBJECT)

@@ -27,9 +27,9 @@ typedef unsigned short ANA_List_error_type;
 const ANA_List_error_type ANA_List_ERROR_OCCURED = 1;
 const ANA_List_error_type ANA_List_NO_ERROR      = 0;
 
-const int ANA_List_NO_PREV_ELEMENT = -1;
+const int8_t ANA_List_NO_PREV_ELEMENT = -1;
 
-const int ANA_List_DUMMY_ELEMENT  =  0;
+const int8_t ANA_List_DUMMY_ELEMENT  =  0;
 
 struct ANA_List_errors_struct
 {
@@ -46,6 +46,7 @@ struct ANA_List_errors_struct
     ANA_List_error_type ANA_List_ERROR_CYCLE_FOUND                      : 1;
 };
 
+/// @brief This union is used to avoid UB when compare two bit fields.
 union ANA_List_errors
 {
     ANA_List_errors_struct errors_struct;
@@ -55,15 +56,17 @@ union ANA_List_errors
 struct ANA_List
 {
     ANA_List_data_type* list_data;
-    int* next;
-    int* prev;
+    uint32_t* next;
+    int32_t * prev;
 
-    int free;
+    uint32_t free;
 
     size_t list_capacity;
     size_t list_n_elems;
 
+    // Two bit fields, the first one is for errors.
     ANA_List_errors     list_errors_field;
+    // The second one is for comparison, it is full of zeros.
     ANA_List_errors ref_list_errors_field;
 };
 

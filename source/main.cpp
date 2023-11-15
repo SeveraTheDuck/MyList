@@ -1,7 +1,7 @@
 #include "ANA_List_struct.h"
 #include "ANA_List_commands.h"
 
-int main ()
+int32_t main ()
 {
     ANA_List list = {};
 
@@ -15,6 +15,10 @@ int main ()
     ANA_List_PushFront (5, &list);
 
     ANA_List_Erase (2, &list);
+
+    ANA_List_Dump  (&list);
+
+    ANA_List_ReallocDown (5, &list);
 
     ANA_List_Dump  (&list);
 

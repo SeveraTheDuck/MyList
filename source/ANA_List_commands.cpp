@@ -1,20 +1,23 @@
 #include "../headers/ANA_List_commands.h"
 
-int
+static ANA_List_error_type
+ANA_List_Realloc (ANA_List* const list);
+
+uint32_t
 ANA_List_PushBack (const ANA_List_data_type value,
                          ANA_List*    const list)
 {
     ANA_List_VerifyAndDump (list);
 
-    ANA_List_Insert (list->prev [ ANA_List_DUMMY_ELEMENT ],
+    ANA_List_Insert ((uint32_t) list->prev [ ANA_List_DUMMY_ELEMENT ],
                      value, list);
 
     ANA_List_VerifyAndDump (list);
 
-    return list->prev [ ANA_List_DUMMY_ELEMENT ];
+    return (uint32_t) list->prev [ ANA_List_DUMMY_ELEMENT ];
 }
 
-int
+uint32_t
 ANA_List_PushFront (const ANA_List_data_type value,
                           ANA_List*    const list)
 {
@@ -27,17 +30,17 @@ ANA_List_PushFront (const ANA_List_data_type value,
     return list->next [ ANA_List_DUMMY_ELEMENT ];
 }
 
-int
-ANA_List_Insert (const int                position,
+uint32_t
+ANA_List_Insert (const uint32_t           position,
                  const ANA_List_data_type value,
                        ANA_List*    const list)
 {
     ANA_List_VerifyAndDump (list);
 
-    if (position < 0 ||
+    if (position >= list->list_capacity ||
         list->prev [position] == ANA_List_NO_PREV_ELEMENT)
     {
-        fprintf (stderr, "In function ANA_List_Insert "
+        fprintf (stderr, "In function ANA_List_Insert() "
                          "position of element out of range.\n");
         return ANA_List_DUMMY_ELEMENT;
     }
@@ -50,14 +53,14 @@ ANA_List_Insert (const int                position,
     list->list_n_elems++;
 
     // insert itself
-    int new_index = list->free;
-    list->free    = list->next[ list->free ];
+    uint32_t new_index = list->free;
+    list->free = (uint32_t) list->next[ list->free ];
 
-    list->prev [ list->next [position] ] = new_index;
+    list->prev [ list->next [position] ] = (int32_t) new_index;
     list->next [ new_index ] = list->next [position];
 
     list->next [ position ]  = new_index;
-    list->prev [ new_index ] = position;
+    list->prev [ new_index ] = (int32_t) position;
 
     list->list_data [ new_index ] = value;
 
@@ -66,41 +69,95 @@ ANA_List_Insert (const int                position,
     return new_index;
 }
 
-int
-ANA_List_Erase (const unsigned int       position,
-                      ANA_List*    const list)
+uint32_t
+ANA_List_Erase (const uint32_t        position,
+                      ANA_List* const list)
 {
     if (list->prev [position] == ANA_List_NO_PREV_ELEMENT)
     {
-        fprintf (stderr, "In function ANA_List_Erase "
+        fprintf (stderr, "In function ANA_List_Erase() "
                          "position of element out of range.\n");
         return ANA_List_DUMMY_ELEMENT;
     }
+
     else if (position == ANA_List_DUMMY_ELEMENT)
     {
-        fprintf (stderr, "In function ANA_List_Erase "
+        fprintf (stderr, "In function ANA_List_Erase() "
                          "calling for dummy element, return.\n");
         return ANA_List_DUMMY_ELEMENT;
     }
 
     list->list_n_elems--;
 
+    // connect next and prev of position
     list->next [ list->prev [position] ] = list->next [position];
     list->prev [ list->next [position] ] = list->prev [position];
 
-    int prev_index = list->prev [position];
+    uint32_t prev_index = (uint32_t) list->prev [position];
 
-    list->next      [position] = list->free;
-    list->prev      [position] = ANA_List_NO_PREV_ELEMENT;
-    list->list_data [position] = ANA_List_POISON;
+    // move the last element for linearization
+    list->next      [position] = list->next [ list->list_n_elems ];
+    list->prev      [position] = list->prev [ list->list_n_elems ];
+    list->list_data [position] = list->list_data [ list->list_n_elems ];
 
-    list->free = (int) position; // size_t ptrdiff_t
+    list->next      [ list->list_n_elems ] = list->free;
+    list->prev      [ list->list_n_elems ] = ANA_List_NO_PREV_ELEMENT;
+    list->list_data [ list->list_n_elems ] = ANA_List_POISON;
+
+    list->free = (uint32_t) list->list_n_elems;
 
     return prev_index;
 }
 
 ANA_List_error_type
 ANA_List_ReallocUp (ANA_List* const list)
+{
+    if (ANA_List_Realloc (list))
+    {
+        return ANA_List_ERROR_OCCURED;
+    }
+
+    for (size_t list_index = list->list_capacity / ANA_List_EXPAND_MULTIPLIER;
+                list_index < list->list_capacity;
+              ++list_index)
+    {
+        list->list_data[list_index] = ANA_List_POISON;
+        list->next     [list_index] = (uint32_t) list_index + 1;
+        list->prev     [list_index] = ANA_List_NO_PREV_ELEMENT;
+    }
+
+    list->next [ list->list_capacity - 1] = 0;
+    list->free = (uint32_t) (list->list_capacity / ANA_List_EXPAND_MULTIPLIER);
+
+    return ANA_List_NO_ERROR;
+}
+
+ANA_List_error_type
+ANA_List_ReallocDown (const size_t    new_capacity,
+                      ANA_List* const list)
+{
+    size_t old_capacity = list->list_capacity;
+    list->list_capacity = new_capacity;
+
+    if (ANA_List_Realloc (list))
+    {
+        fprintf (stderr, "ANA_List_ReallocDown() error,"
+                         "old capacity saved\n");
+        list->list_capacity = old_capacity;
+
+        return ANA_List_ERROR_OCCURED;
+    }
+
+    if (list->prev [ new_capacity - 1] == ANA_List_NO_PREV_ELEMENT)
+    {
+        list->next [ new_capacity - 1] = ANA_List_DUMMY_ELEMENT;
+    }
+
+    return ANA_List_NO_ERROR;
+}
+
+static ANA_List_error_type
+ANA_List_Realloc (ANA_List* const list)
 {
     list->list_data = (ANA_List_data_type*) realloc (list->list_data,
                                                      list->list_capacity *
@@ -114,8 +171,8 @@ ANA_List_ReallocUp (ANA_List* const list)
         return ANA_List_ERROR_OCCURED;
     }
 
-    list->next = (int*) realloc (list->next,
-                                 list->list_capacity * sizeof (int));
+    list->next = (uint32_t*) realloc (list->next,
+                             list->list_capacity * sizeof (uint32_t));
     if (!list->next)
     {
         perror ("list->next reallocation error");
@@ -125,8 +182,8 @@ ANA_List_ReallocUp (ANA_List* const list)
         return ANA_List_ERROR_OCCURED;
     }
 
-    list->prev = (int*) realloc (list->prev,
-                                 list->list_capacity * sizeof (int));
+    list->prev = (int32_t*)  realloc (list->prev,
+                             list->list_capacity * sizeof (uint32_t));
     if (!list->prev)
     {
         perror ("list->prev reallocation error");
@@ -136,40 +193,5 @@ ANA_List_ReallocUp (ANA_List* const list)
         return ANA_List_ERROR_OCCURED;
     }
 
-    for (size_t list_index = list->list_capacity / ANA_List_EXPAND_MULTIPLIER;
-                list_index < list->list_capacity;
-              ++list_index)
-    {
-        list->list_data[list_index] = ANA_List_POISON;
-        list->next     [list_index] = (int) list_index + 1;
-        list->prev     [list_index] = ANA_List_NO_PREV_ELEMENT;
-    }
-
-    list->next [ list->list_capacity - 1] = 0;
-    list->free = (int) (list->list_capacity / ANA_List_EXPAND_MULTIPLIER);
-
     return ANA_List_NO_ERROR;
 }
-
-// int SlOW_sl0_w_S10wD0nTUseMeST0P_itsM1stAke_d0ntCoPYme_or_uGetDamagetoDiarrhea_F1nd_ElemByinDex (quadratic_equation* const square_elements, double* const b_coef)
-// {
-//     static bool is_equation_created = 0;
-//
-//     if (!is_equation_created)
-//     {
-//         square_elements->a_coef = (double) rand() / RAND_MAX;
-//         *b_coef                 = (double) rand() / RAND_MAX;
-//         square_elements->c_coef = (double) rand() / RAND_MAX;
-//
-//         is_equation_created = 1;
-//         return *b_coef;
-//     }
-//
-//     double disc = (*b_coef) * (*b_coef) - 4 * (square_elements->a_coef) * (square_elements->c_coef);
-//     if (square_elements->n_roots == 0 && disc < 0 ||
-//         square_elements->n_roots == 1 && ((square_elements->a_coef * square_elements->root_1 * square_elements->root_1) - (*b) * square_elements->root_1 == - square_elements->c_coef))
-//     {
-//
-//     }
-//
-// }
